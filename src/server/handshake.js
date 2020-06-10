@@ -7,7 +7,7 @@ module.exports = function (client, server, { version }) {
     client.serverHost = packet.serverHost
     client.serverPort = packet.serverPort
     client.protocolVersion = packet.protocolVersion
-    client.version = client.protocolVersion;
+    client.version = client.protocolVersion
 
     if (packet.nextState === 1) {
       client.state = states.STATUS
