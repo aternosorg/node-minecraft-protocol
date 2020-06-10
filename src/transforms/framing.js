@@ -64,7 +64,7 @@ class Splitter extends Transform {
         } catch (e) {
           if (e.partialReadError) {
             break
-          } else { throw e }
+          }
         }
       }
     }
