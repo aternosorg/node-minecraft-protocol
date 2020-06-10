@@ -10,10 +10,12 @@ module.exports = function (client, server, options) {
   const {
     'online-mode': onlineMode = true,
     kickTimeout = 30 * 1000,
-    errorHandler: clientErrorHandler = (client, err) => client.end(err)
+    errorHandler: clientErrorHandler = (client, err) => client.end(err),
+    shouldVerifyClient = null
   } = options
 
   let serverId
+  let shouldVerify = null
 
   client.on('error', function (err) {
     clientErrorHandler(client, err)
@@ -26,10 +28,18 @@ module.exports = function (client, server, options) {
 
   let loginKickTimer = setTimeout(kickForNotLoggingIn, kickTimeout)
 
-  function onLogin (packet) {
+  async function onLogin (packet) {
     client.username = packet.username
-    const isException = !!server.onlineModeExceptions[client.username.toLowerCase()]
-    const needToVerify = (onlineMode && !isException) || (!onlineMode && isException)
+    let needToVerify
+    if (shouldVerifyClient) {
+      shouldVerify = await shouldVerifyClient(client)
+    }
+    if (shouldVerify === null) {
+      const isException = !!server.onlineModeExceptions[client.username.toLowerCase()]
+      needToVerify = (onlineMode && !isException) || (!onlineMode && isException)
+    } else {
+      needToVerify = shouldVerify
+    }
     if (needToVerify) {
       serverId = crypto.randomBytes(4).toString('hex')
       client.verifyToken = crypto.randomBytes(4)
@@ -69,8 +79,13 @@ module.exports = function (client, server, options) {
     }
     client.setEncryption(sharedSecret)
 
-    const isException = !!server.onlineModeExceptions[client.username.toLowerCase()]
-    const needToVerify = (onlineMode && !isException) || (!onlineMode && isException)
+    let needToVerify
+    if (shouldVerify === null) {
+      const isException = !!server.onlineModeExceptions[client.username.toLowerCase()]
+      needToVerify = (onlineMode && !isException) || (!onlineMode && isException)
+    } else {
+      needToVerify = shouldVerify
+    }
     const nextStep = needToVerify ? verifyUsername : loginClient
     nextStep()
 
@@ -105,8 +120,12 @@ module.exports = function (client, server, options) {
   }
 
   function loginClient () {
-    const isException = !!server.onlineModeExceptions[client.username.toLowerCase()]
-    if (onlineMode === false || isException) {
+    if (shouldVerify === null) {
+      const isException = !!server.onlineModeExceptions[client.username.toLowerCase()]
+      if (onlineMode === false || isException) {
+        client.uuid = nameToMcOfflineUUID(client.username)
+      }
+    } else if (shouldVerify === false) {
       client.uuid = nameToMcOfflineUUID(client.username)
     }
     if (client.protocolVersion >= 27) { // 14w28a (27) added whole-protocol compression (http://wiki.vg/Protocol_History#14w28a), earlier versions per-packet compressed TODO: refactor into minecraft-data
