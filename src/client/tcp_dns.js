@@ -22,20 +22,18 @@ module.exports = function (client, options) {
           // Error resolving domain
           if (err) {
             // Could not resolve SRV lookup, connect directly
-            if (['ENODATA', 'ENOTFOUND', 'ESERVFAIL'].indexOf(err.code) !== -1) {
-              client.setSocket(net.connect(options.port, options.host))
-              return
-            } else {
-              // Something else happened
-              return client.emit('error', err)
-            }
+            client.setSocket(net.connect(options.port, options.host))
+            return
           }
 
           // SRV Lookup resolved conrrectly
           if (addresses && addresses.length > 0) {
+            options.host = addresses[0].name
+            options.port = addresses[0].port
             client.setSocket(net.connect(addresses[0].port, addresses[0].name))
           } else {
-            client.emit('error', new Error('Could not resolve hostname'))
+            // Otherwise, just connect using the provided hostname and port
+            client.setSocket(net.connect(options.port, options.host))
           }
         })
       } else {
