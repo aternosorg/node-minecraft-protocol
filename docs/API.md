@@ -77,7 +77,10 @@ Returns a `Client` instance and perform login.
  * host : default to localhost
  * clientToken : generated if a password is given
  * accessToken : generated if a password is given
+ * authServer : auth server, default to https://authserver.mojang.com
+ * sessionServer : session server, default to https://sessionserver.mojang.com
  * keepAlive : send keep alive packets : default to true
+ * closeTimeout : end the connection after this delay in milliseconds if server doesn't answer to ping, default to `120*1000`
  * checkTimeoutInterval : default to `30*1000` (30s), check if keepalive received at that period, disconnect otherwise.
  * version : 1.8 or 1.9 or false (to auto-negotiate): default to 1.8
  * customPackets (optional) : an object index by version/state/direction/name, see client_custom_packet for an example
@@ -139,8 +142,8 @@ The latency of the client, in ms. Updated at each keep alive.
 
 ### `packet` event
 
-Called with every packet parsed. Takes two params, the JSON data we parsed,
-and the packet metadata (name, state)
+Called with every packet parsed. Takes three params, the JSON data we parsed,
+, the packet metadata (name, state) and the initial buffer
 
 ### `raw` event
 
@@ -200,6 +203,8 @@ correct data type. You can figure out the types [here](http://wiki.vg/Entities#E
 
 
 ## mc.ping(options, callback)
+
+Ping a minecraft server and retrieve information about it
 
 `callback(err, pingResults)`
 
