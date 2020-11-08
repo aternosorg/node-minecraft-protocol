@@ -82,6 +82,7 @@ Returns a `Client` instance and perform login.
  * sessionServer : session server, default to https://sessionserver.mojang.com
  * keepAlive : send keep alive packets : default to true
  * closeTimeout : end the connection after this delay in milliseconds if server doesn't answer to ping, default to `120*1000`
+ * noPongTimeout : after the server opened the connection, wait for a default of `5*1000` after pinging and answers without the latency
  * checkTimeoutInterval : default to `30*1000` (30s), check if keepalive received at that period, disconnect otherwise.
  * version : 1.8 or 1.9 or false (to auto-negotiate): default to 1.8
  * customPackets (optional) : an object index by version/state/direction/name, see client_custom_packet for an example
@@ -101,9 +102,12 @@ Takes a minecraft `version` as second argument.
 
 write a packet
 
-### client.end(reason)
+### client.end(reason, fullReason)
 
-ends the connection with `reason`
+Ends the connection with `reason` or `fullReason`
+If `fullReason` is not defined, then the `reason` will be used.
+
+`fullReason` is a JSON object, which represents [chat](https://wiki.vg/Chat) message.
 
 ### client.state
 

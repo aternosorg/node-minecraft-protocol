@@ -1,5 +1,18 @@
 # History
 
+## 1.19.0
+
+* make auto version more robust by giving up after 5s if no answer to ping is given but the version is returned
+
+## 1.18.0
+
+* client.end with full reason (thanks @redcarti)
+* allow immediate shutdown when client is ended (thanks @Svebran)
+
+## 1.17.0
+
+* minecraft 1.16.2 and 1.16.3 support
+
 ## 1.16.0
 
 * add buffer to packet event
