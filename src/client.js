@@ -12,6 +12,7 @@ const createCipher = require('./transforms/encryption').createCipher
 const createDecipher = require('./transforms/encryption').createDecipher
 
 const closeTimeout = 30 * 1000
+const socketTimeout = 30 * 1000
 
 class Client extends EventEmitter {
   constructor (isServer, version, customPackets, hideErrors = false) {
@@ -150,18 +151,24 @@ class Client extends EventEmitter {
       endSocket()
     }
 
+    const onTimeout = () => {
+      this.emit('timeout');
+      this.end('timeout');
+    }
+
     const onError = (err) => this.emit('error', err)
 
     this.socket = socket
 
     if (this.socket.setNoDelay) { this.socket.setNoDelay(true) }
+    if (this.socket.setTimeout) { this.socket.setTimeout(socketTimeout) }
 
     this.socket.on('connect', () => this.emit('connect'))
 
     this.socket.on('error', onFatalError)
     this.socket.on('close', endSocket)
     this.socket.on('end', endSocket)
-    this.socket.on('timeout', endSocket)
+    this.socket.on('timeout', onTimeout)
     this.framer.on('error', onError)
     this.splitter.on('error', onError)
 
