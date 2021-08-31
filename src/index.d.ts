@@ -8,6 +8,7 @@ import { Agent } from 'http'
 declare module 'minecraft-protocol' {
 	export class Client extends EventEmitter {
 		constructor(isServer: boolean, version: string, customPackets?: any)
+		customPackets: any
 		isServer: boolean
 		latency: number
 		profile: any
@@ -17,20 +18,34 @@ declare module 'minecraft-protocol' {
 		username: string
 		uuid: string
 		protocolVersion: number
+		version: string
+		compressionThreshold: string
 		connect(port: number, host: string): void
-		end(reason: string): void
+		setSocket(socket: Socket): void
+		end(reason?: string): void
 		registerChannel(name: string, typeDefinition: any, custom?: boolean): void
 		unregisterChannel(name: string): void
 		write(name: string, params: any): void
 		writeRaw(buffer: any): void
 		writeChannel(channel: any, params: any): void
 		on(event: 'error', listener: (error: Error) => void): this
-		on(event: 'packet', handler: (data: any, packetMeta: PacketMeta) => void): this
-		on(event: 'raw', handler: (data: any, packetMeta: PacketMeta) => void): this
+		on(event: 'packet', handler: (data: any, packetMeta: PacketMeta, buffer: Buffer, fullBuffer: Buffer) => void): this
+		on(event: 'raw', handler: (buffer: Buffer, packetMeta: PacketMeta) => void): this
 		on(event: 'session', handler: (session: any) => void): this
 		on(event: 'state', handler: (newState: States, oldState: States) => void): this
 		on(event: 'end', handler: (reason: string) => void): this
-		on(event: string, handler: (data: any, packetMeta: PacketMeta)=> unknown): this
+		on(event: 'connect', handler: () => unknown): this
+		on(event: string, handler: (data: any, packetMeta: PacketMeta) => unknown): this
+		on(event: `raw.${string}`, handler: (buffer: Buffer, packetMeta: PacketMeta) => unknown): this
+        	once(event: 'error', listener: (error: Error) => void): this
+		once(event: 'packet', handler: (data: any, packetMeta: PacketMeta, buffer: Buffer, fullBuffer: Buffer) => void): this
+		once(event: 'raw', handler: (buffer: Buffer, packetMeta: PacketMeta) => void): this
+		once(event: 'sessionce', handler: (sessionce: any) => void): this
+		once(event: 'state', handler: (newState: States, oldState: States) => void): this
+		once(event: 'end', handler: (reasonce: string) => void): this
+		once(event: 'concenect', handler: () => unknown): this
+		once(event: string, handler: (data: any, packetMeta: PacketMeta) => unknown): this
+		once(event: `raw.${string}`, handler: (buffer: Buffer, packetMeta: PacketMeta) => unknown): this
 	}
 
 	export interface ClientOptions {
@@ -63,9 +78,18 @@ declare module 'minecraft-protocol' {
 		playerCount: number
 		writeToClients(clients: Client[], name: string, params: any): void
 		close(): void
-		on(event: 'connection', handler: (client: Client) => void): this
+		on(event: 'connection', handler: (client: ServerClient) => void): this
 		on(event: 'error', listener: (error: Error) => void): this
-		on(event: 'login', handler: (client: Client) => void): this
+		on(event: 'login', handler: (client: ServerClient) => void): this
+		on(event: 'listening', listener: () => void): this
+		once(event: 'connection', handler: (client: ServerClient) => void): this
+		once(event: 'error', listener: (error: Error) => void): this
+		once(event: 'login', handler: (client: ServerClient) => void): this
+		once(event: 'listening', listener: () => void): this
+	}
+
+	export interface ServerClient extends Client {
+		id: number
 	}
 
 	export interface ServerOptions {
@@ -81,6 +105,7 @@ declare module 'minecraft-protocol' {
 		port?: number
 		version?: string
 		beforePing?: (response: any, client: Client, callback?: (result: any) => any) => any
+		beforeLogin?: (client: Client) => void
 		errorHandler?: (client: Client, error: Error) => void
 		agent?: Agent
 	}
@@ -144,7 +169,7 @@ declare module 'minecraft-protocol' {
 	}
 
 	export const states: typeof States
-	export const supportedVersions: ['1.7', '1.8', '1.9', '1.10', '1.11.2', '1.12.2', '1.13.1']
+	export const supportedVersions: ['1.7', '1.8', '1.9', '1.10', '1.11.2', '1.12.2', '1.13.2', '1.14.4', '1.15.2', '1.16.5', '1.17.1']
 
 	export function createServer(options: ServerOptions): Server
 	export function createClient(options: ClientOptions): Client

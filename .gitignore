@@ -4,3 +4,4 @@ test/server*
 package-lock.json
 versions/
 src/client/*.json
+.idea

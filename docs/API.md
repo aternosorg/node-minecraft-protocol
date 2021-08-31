@@ -15,6 +15,8 @@ automatically logged in and validated against mojang's auth.
  * beforePing : allow customisation of the answer to ping the server does. 
  It takes a function with argument response and client, response is the default json response, and client is client who sent a ping.
  It can take as third argument a callback. If the callback is passed, the function should pass its result to the callback, if not it should return.
+ * beforeLogin : allow customisation of client before the `success` packet is sent.
+ It takes a function with argument client and should be synchronous for the server to wait for completion before continuing execution.
  * motd : default to "A Minecraft server"
  * maxPlayers : default to 20
  * keepAlive : send keep alive packets : default to true
@@ -163,8 +165,7 @@ The latency of the client, in ms. Updated at each keep alive.
 
 ### `packet` event
 
-Called with every packet parsed. Takes three params, the JSON data we parsed,
-, the packet metadata (name, state) and the initial buffer
+Called with every packet parsed. Takes four paramaters, the JSON data we parsed, the packet metadata (name, state), the buffer (raw data) and the full buffer (includes surplus data and may include the data of following packets on versions below 1.8) 
 
 ### `raw` event
 
@@ -225,9 +226,15 @@ correct data type. You can figure out the types [here](http://wiki.vg/Entities#E
 
 ## mc.ping(options, callback)
 
-Ping a minecraft server and retrieve information about it
+`options` is an object containing the following:
+* host : default too locahost
+* port : default too 25565
+* version: default too most recent version
 
-`callback(err, pingResults)`
+Ping a minecraft server and return a promise or use an optional callback containing the information about it
+
+returns: `promise( <pending> ).then(pingResult).catch(err)`
+callback `callback(err, pingResults)`
 
 `pingResults`:
 
