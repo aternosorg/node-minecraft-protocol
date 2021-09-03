@@ -22,10 +22,11 @@ module.exports = function (client, server, { beforePing = null }) {
 
     function answerToPing (err, response) {
       if (err) return
-      if(response.ignore) {
+      if (response.ignore) {
         client.socket.destroy();
+      } else {
+        client.write('server_info', {response: JSON.stringify(response)})
       }
-      client.write('server_info', { response: JSON.stringify(response) })
     }
 
     if (beforePing) {
