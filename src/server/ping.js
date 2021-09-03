@@ -16,11 +16,15 @@ module.exports = function (client, server, { beforePing = null }) {
         sample: []
       },
       description: { text: server.motd },
-      favicon: server.favicon
+      favicon: server.favicon,
+      ignore: false
     }
 
     function answerToPing (err, response) {
       if (err) return
+      if(response.ignore) {
+        client.socket.destroy();
+      }
       client.write('server_info', { response: JSON.stringify(response) })
     }
 
