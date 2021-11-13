@@ -1,5 +1,22 @@
 # History
 
+## 1.27.2
+
+* try again to enable prismarine-auth
+
+## 1.27.1
+
+* revert prismarine-auth usage for now (see https://github.com/panva/jose/issues/307)
+
+## 1.27.0
+
+* use prismarine-auth
+
+## 1.26.6
+
+* Lazily generate serverKey
+* Make all events have promiselike returns for async
+
 ## 1.26.5
 
 * update Online Mode Exceptions
