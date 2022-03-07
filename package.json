@@ -52,7 +52,7 @@
     "lodash.merge": "^4.3.0",
     "minecraft-data": "^2.109.0",
     "minecraft-folder-path": "^1.2.0",
-    "node-fetch": "^2.6.1",
+    "node-fetch": "^3.2.2",
     "node-rsa": "^0.4.2",
     "prismarine-auth": "^1.1.0",
     "prismarine-nbt": "^2.0.0",
