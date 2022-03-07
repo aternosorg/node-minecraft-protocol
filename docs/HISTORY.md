@@ -1,5 +1,17 @@
 # History
 
+## 1.31.0
+
+* 1.18.2
+
+## 1.30.0
+
+* add reasons for client.end() & fix issues (@U5B)
+
+## 1.29.1
+
+* Remove entitlement check in microsoftAuth (#929)
+
 ## 1.29.0
 
 * 1.18.0 support
