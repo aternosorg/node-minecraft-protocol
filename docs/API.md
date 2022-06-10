@@ -19,6 +19,7 @@ automatically logged in and validated against mojang's auth.
  * beforeLogin : allow customisation of client before the `success` packet is sent.
  It takes a function with argument client and should be synchronous for the server to wait for completion before continuing execution.
  * motd : default to "A Minecraft server"
+ * motdMsg : A json object of the chat message to use instead of `motd`. Can be build using [prismarine-chat](https://github.com/PrismarineJS/prismarine-chat) and calling .toJSON(). Not used with legacy pings.
  * maxPlayers : default to 20
  * keepAlive : send keep alive packets : default to true
  * version : the version of the server, defaults to the latest version. Set version to `false` to enable dynamic cross version support.
@@ -76,6 +77,14 @@ Called when a client connects, but before any login has happened. Takes a
 ### `login` event
 
 Called when a client is logged in against server. Takes a `Client` parameter.
+
+### `listening` event
+
+Called when the server is listening for connections. This means that the server is ready to accept incoming connections.
+
+### `close` event
+
+Called when the server is no longer listening to incoming connections.
 
 
 ## mc.createClient(options)
@@ -327,6 +336,10 @@ The minecraft protocol states.
 ## mc.supportedVersions
 
 The supported minecraft versions.
+
+## mc.defaultVersion
+
+The current default minecraft version.
 
 ## mc.createSerializer({ state = states.HANDSHAKING, isServer = false , version})
 
