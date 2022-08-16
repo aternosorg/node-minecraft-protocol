@@ -63,8 +63,8 @@ module.exports = function (client, server, options) {
         const signable = packet.signature.timestamp + publicPEM // (expires at + publicKey)
 
         if (!crypto.verify('RSA-SHA1', Buffer.from(signable, 'utf8'), mojangPubKey, packet.signature.signature)) {
-          raise('multiplayer.disconnect.invalid_public_key_signature')
-          return
+          //raise('multiplayer.disconnect.invalid_public_key_signature')
+          //return
         }
         client.profileKeys = { public: publicKey, publicPEM }
       } catch (err) {
@@ -106,8 +106,8 @@ module.exports = function (client, server, options) {
       // This is the default action starting in 1.19.1.
       const signable = concat('buffer', client.verifyToken, 'i64', packet.crypto.salt)
       if (!crypto.verify('sha256WithRSAEncryption', signable, client.profileKeys.public, packet.crypto.messageSignature)) {
-        //raise('multiplayer.disconnect.invalid_public_key_signature')
-        //return
+        raise('multiplayer.disconnect.invalid_public_key_signature')
+        return
       }
     } else {
       const encryptedToken = packet.hasVerifyToken ? packet.crypto.verifyToken : packet.verifyToken
