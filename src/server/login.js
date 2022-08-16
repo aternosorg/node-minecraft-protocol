@@ -106,8 +106,8 @@ module.exports = function (client, server, options) {
       // This is the default action starting in 1.19.1.
       const signable = concat('buffer', client.verifyToken, 'i64', packet.crypto.salt)
       if (!crypto.verify('sha256WithRSAEncryption', signable, client.profileKeys.public, packet.crypto.messageSignature)) {
-        raise('multiplayer.disconnect.invalid_public_key_signature')
-        return
+        //raise('multiplayer.disconnect.invalid_public_key_signature')
+        //return
       }
     } else {
       const encryptedToken = packet.hasVerifyToken ? packet.crypto.verifyToken : packet.verifyToken
