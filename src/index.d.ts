@@ -6,6 +6,7 @@ import * as Stream from 'stream'
 import { Agent } from 'http'
 import { Transform } from "readable-stream";
 import { KeyObject } from 'crypto';
+import { Realm } from "prismarine-realms"
 
 type PromiseLike = Promise<void> | void
 
@@ -35,8 +36,9 @@ declare module 'minecraft-protocol' {
 		registerChannel(name: string, typeDefinition: any, custom?: boolean): void
 		unregisterChannel(name: string): void
 		writeChannel(channel: any, params: any): void
-		signMessage(message: string, timestamp: BigInt, salt?: number): Buffer
+		signMessage(message: string, timestamp: BigInt, salt?: number, preview?: string): Buffer
 		verifyMessage(publicKey: Buffer | KeyObject, packet: object): boolean
+		reportPlayer(uuid: string, reason: 'FALSE_REPORTING' | 'HATE_SPEECH' | 'TERRORISM_OR_VIOLENT_EXTREMISM' | 'CHILD_SEXUAL_EXPLOITATION_OR_ABUSE' | 'IMMINENT_HARM' | 'NON_CONSENSUAL_INTIMATE_IMAGERY' | 'HARASSMENT_OR_BULLYING' | 'DEFAMATION_IMPERSONATION_FALSE_INFORMATION' | 'SELF_HARM_OR_SUICIDE' | 'ALCOHOL_TOBACCO_DRUGS', signatures: Buffer[], comment?: string): Promise<true>
 		on(event: 'error', listener: (error: Error) => PromiseLike): this
 		on(event: 'packet', handler: (data: any, packetMeta: PacketMeta, buffer: Buffer, fullBuffer: Buffer) => PromiseLike): this
 		on(event: 'raw', handler: (buffer: Buffer, packetMeta: PacketMeta) => PromiseLike): this
@@ -46,13 +48,14 @@ declare module 'minecraft-protocol' {
 		on(event: 'connect', handler: () => PromiseLike): this
 		on(event: string, handler: (data: any, packetMeta: PacketMeta) => PromiseLike): this
 		on(event: `raw.${string}`, handler: (buffer: Buffer, packetMeta: PacketMeta) => PromiseLike): this
+		on(event: 'playerChat', handler: ({ formattedMessage: string, message: string, type: string, sender: string, senderName: string, senderTeam: string, verified?: boolean })): this
 		once(event: 'error', listener: (error: Error) => PromiseLike): this
 		once(event: 'packet', handler: (data: any, packetMeta: PacketMeta, buffer: Buffer, fullBuffer: Buffer) => PromiseLike): this
 		once(event: 'raw', handler: (buffer: Buffer, packetMeta: PacketMeta) => PromiseLike): this
 		once(event: 'sessionce', handler: (sessionce: any) => PromiseLike): this
 		once(event: 'state', handler: (newState: States, oldState: States) => PromiseLike): this
 		once(event: 'end', handler: (reasonce: string) => PromiseLike): this
-		once(event: 'concenect', handler: () => PromiseLike): this
+		once(event: 'connect', handler: () => PromiseLike): this
 		once(event: string, handler: (data: any, packetMeta: PacketMeta) => PromiseLike): this
 		once(event: `raw.${string}`, handler: (buffer: Buffer, packetMeta: PacketMeta) => PromiseLike): this
 	}
@@ -129,15 +132,16 @@ declare module 'minecraft-protocol' {
 		id?: number
 		session?: SessionOption
 		validateChannelProtocol?: boolean,
+		realms?: RealmsOptions
 		// 1.19+
-		disableChatSigning: boolean
+		disableChatSigning?: boolean
 	}
 
 	export class Server extends EventEmitter {
 		constructor(version: string, customPackets?: any)
 		writeToClients(clients: Client[], name: string, params: any): void
 		onlineModeExceptions: object
-		clients: ClientsMap
+		clients: { [key: number]: ServerClient }
 		playerCount: number
 		maxPlayers: number
 		motd: string
@@ -156,6 +160,10 @@ declare module 'minecraft-protocol' {
 
 	export interface ServerClient extends Client {
 		id: number
+		// You must call this function when the server receives a message from a player and that message gets
+		// broadcast to other players in player_chat packets. This function stores these packets so the server 
+		// can then verify a player's lastSeenMessages field in inbound chat packets to ensure chain integrity.
+		logSentMessageFromPeer(packet: object): boolean
 	}
 
 	export interface ServerOptions {
@@ -181,7 +189,9 @@ declare module 'minecraft-protocol' {
 		shouldVerifyClient?: (client: Client) => boolean | Promise<boolean>
 		// 1.19+
 		// Require connecting clients to have chat signing support enabled
-		enforceSecureProfile: boolean
+		enforceSecureProfile?: boolean
+		// 1.19.1 & 1.19.2 only: If client should send previews of messages they are typing to the server
+		enableChatPreview?: boolean
 	}
 
 	export interface SerializerOptions {
@@ -210,10 +220,6 @@ declare module 'minecraft-protocol' {
 	export interface PacketMeta {
 		name: string
 		state: States
-	}
-
-	interface ClientsMap {
-		[key: number]: Client
 	}
 
 	export interface PingOptions {
@@ -254,6 +260,11 @@ declare module 'minecraft-protocol' {
 		}
 		favicon?: string
 		latency: number
+	}
+
+	export interface RealmsOptions {
+		realmId?: string
+		pickRealm?: (realms: Realm[]) => Realm
 	}
 
 	export const states: typeof States

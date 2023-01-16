@@ -33,6 +33,7 @@ automatically logged in and validated against mojang's auth.
  * validateChannelProtocol (optional) : whether or not to enable protocol validation for custom protocols using plugin channels for the connected clients. Defaults to true
  * shouldVerifyClient (optional) : a callback function to decide if verification (online mode login) is required individually for each client, takes a Client as first argument and returns a boolean, can be async
  * enforceSecureProfile (optional) : Kick clients that do not have chat signing keys from Mojang (1.19+)
+ * generatePreview (optional) : Function to generate chat previews. Takes the raw message string and should return the message preview as a string.  (1.19-1.19.2)
 
 ## mc.Server(version,[customPackets])
 
@@ -45,6 +46,10 @@ Write a packet to all `clients` but encode it only once.
 ### client.verifyMessage(packet) : boolean
 
 Verifies if player's chat message packet was signed with their Mojang provided key
+
+### client.logSentMessageFromPeer(packet)
+(1.19.1+) You must call this function when the server receives a message from a player and that message gets
+broadcast to other players in player_chat packets. This function stores these packets so the server can then verify a player's lastSeenMessages field in inbound chat packets to ensure chain integrity. For more information, see [chat.md](chat.md).
 
 ### server.onlineModeExceptions
 
@@ -136,6 +141,10 @@ Returns a `Client` instance and perform login.
  * id : a numeric client id used for referring to multiple clients in a server
  * validateChannelProtocol (optional) : whether or not to enable protocol validation for custom protocols using plugin channels. Defaults to true
  * disableChatSigning (optional) : Don't try obtaining chat signing keys from Mojang (1.19+)
+ * realms : An object which should contain one of the following properties: `realmId` or `pickRealm`. When defined will attempt to join a Realm without needing to specify host/port. **The authenticated account must either own the Realm or have been invited to it** 
+   * realmId : The id of the Realm to join. 
+   * pickRealm(realms) : A function which will have an array of the user Realms (joined/owned) passed to it. The function should return a Realm. 
+
 
 ## mc.Client(isServer,version,[customPackets])
 
@@ -254,6 +263,25 @@ parameters.
 
 Called when an error occurs within the client. Takes an Error as parameter.
 
+### `playerChat` event
+
+Called when a chat message from another player arrives. The emitted object contains:
+* formattedMessage -- the chat message preformatted, if done on server side
+* plainMessage -- the chat message without formatting (for example no `<username> message` ; instead `message`), on version 1.19+
+* unsignedContent -- unsigned formatted chat contents ; should only be present when the message is modified and server has chat previews disabled - only on version 1.19 - 1.19.2
+* type -- the message type - on 1.19, which format string to use to render message ; below, the place where the message is displayed (for example chat or action bar)
+* sender -- the UUID of the player sending the message
+* senderTeam -- scoreboard team of the player (pre 1.19)
+* verified -- true if message is signed, false if not signed, undefined on versions prior to 1.19
+
+### `systemChat` event
+
+Called when a system chat message arrives. A system chat message is any message not sent by a player. The emitted object contains:
+* formattedMessage -- the chat message preformatted
+* positionid -- the chat type of the message. 1 for system chat and 2 for actionbar
+
+See the [chat example](https://github.com/PrismarineJS/node-minecraft-protocol/blob/master/examples/client_chat/client_chat.js#L1) for usage.
+
 ### per-packet events
 
 Check out the [minecraft-data docs](https://prismarinejs.github.io/minecraft-data/?v=1.8&d=protocol) to know the event names and data field names.
@@ -274,13 +302,16 @@ Start emitting channel events of the given name on the client object.
 
 Unregister a channel `name` and send the unregister packet if `custom` is true.
 
+### client.chat(message)
+Send a chat message to the server, with signing on 1.19+.
+
 ### client.signMessage(message: string, timestamp: BigInt, salt?: number) : Buffer
 
-Generate a signature for a chat message to be sent to server
+(1.19) Generate a signature for a chat message to be sent to server
 
 ### client.verifyMessage(publicKey: Buffer | KeyObject, packet) : boolean
 
-Verifies a player chat packet sent by another player against their public key
+(1.19) Verifies a player chat packet sent by another player against their public key
 
 ## Not Immediately Obvious Data Type Formats
 

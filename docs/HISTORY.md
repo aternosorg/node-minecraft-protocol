@@ -1,5 +1,22 @@
 # History
 
+## 1.38.0
+* Update convenience chat events (@frej4189)
+* Realm Joining (@LucienHH )
+* Fix chat previews not working (@frej4189)
+
+## 1.37.0
+* 1.19.1/2 signed chat support  (@frej4189 @extremeheat)
+
+## 1.36.2
+* Throw error on minecraft-data protocol version mismatch (#1044)
+* Make "fakeHost" option working
+* Update microsoftAuth to set default flow option
+
+## 1.36.1
+
+* Fix new types not being optional. (@IceTank) [#1033](https://github.com/PrismarineJS/node-minecraft-protocol/pull/1033)
+
 ## 1.36.0
 
 * Use offline mode as default authentication, fallback to offline mode if invalid option. (@Kashalls)
