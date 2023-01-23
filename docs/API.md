@@ -45,7 +45,7 @@ Write a packet to all `clients` but encode it only once.
 
 ### client.verifyMessage(packet) : boolean
 
-Verifies if player's chat message packet was signed with their Mojang provided key
+(1.19-1.19.2) Verifies if player's chat message packet was signed with their Mojang provided key. Handled internally (and thus deprecated) in 1.19.3 and above
 
 ### client.logSentMessageFromPeer(packet)
 (1.19.1+) You must call this function when the server receives a message from a player and that message gets
@@ -272,6 +272,8 @@ Called when a chat message from another player arrives. The emitted object conta
 * type -- the message type - on 1.19, which format string to use to render message ; below, the place where the message is displayed (for example chat or action bar)
 * sender -- the UUID of the player sending the message
 * senderTeam -- scoreboard team of the player (pre 1.19)
+* senderName -- Name of the sender 
+* targetName -- Name of the target (for outgoing commands like /tell). Only in 1.19.2+
 * verified -- true if message is signed, false if not signed, undefined on versions prior to 1.19
 
 ### `systemChat` event
@@ -305,7 +307,7 @@ Unregister a channel `name` and send the unregister packet if `custom` is true.
 ### client.chat(message)
 Send a chat message to the server, with signing on 1.19+.
 
-### client.signMessage(message: string, timestamp: BigInt, salt?: number) : Buffer
+### client.signMessage(message: string, timestamp: BigInt, salt?: number, preview?: string, acknowledgements?: Buffer[]) : Buffer
 
 (1.19) Generate a signature for a chat message to be sent to server
 

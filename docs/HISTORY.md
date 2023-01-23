@@ -1,5 +1,20 @@
 # History
 
+## 1.40.1
+* Fix offline mode (@frej4189)
+
+## 1.40.0
+* Add more fields to playerChat event (@frej4189)
+* Update to 1.19.3 (@frej4189)
+
+## 1.39.0
+* Use non-zero salt (@frej4189)
+* Mark message as insecure if unsigned content is present (@frej4189)
+
+## 1.38.1
+* Update chat example for 1.19 (#1059) (@frej4189)
+* Fix chat not working on offline servers (#1060) (@frej4189)
+
 ## 1.38.0
 * Update convenience chat events (@frej4189)
 * Realm Joining (@LucienHH )
