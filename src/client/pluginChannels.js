@@ -14,14 +14,14 @@ module.exports = function (client, options) {
   client.unregisterChannel = unregisterChannel
   client.writeChannel = writeChannel
 
-  client.registerChannel('REGISTER', ['registerarr', []])
-  client.registerChannel('UNREGISTER', ['registerarr', []])
-
-  const above385 = options.protocolVersion >= 385
+  const above385 = mcdata.version.version >= 385
   if (above385) { // 1.13-pre3 (385) added Added Login Plugin Message (https://wiki.vg/Protocol_History#1.13-pre3)
     client.on('login_plugin_request', onLoginPluginRequest)
   }
   const channelNames = above385 ? ['minecraft:register', 'minecraft:unregister'] : ['REGISTER', 'UNREGISTER']
+
+  client.registerChannel(channelNames[0], ['registerarr', []])
+  client.registerChannel(channelNames[1], ['registerarr', []])
 
   function registerChannel (name, parser, custom) {
     if (custom) {
@@ -51,7 +51,14 @@ module.exports = function (client, options) {
       return channel === packet.channel
     })
     if (channel) {
-      if (proto.types[channel]) { packet.data = proto.parsePacketBuffer(channel, packet.data).data }
+      if (proto.types[channel]) {
+        try {
+          packet.data = proto.parsePacketBuffer(channel, packet.data).data
+        } catch (error) {
+          client.emit('error', error)
+          return
+        }
+      }
       debug('read custom payload ' + channel + ' ' + packet.data)
       client.emit(channel, packet.data)
     }

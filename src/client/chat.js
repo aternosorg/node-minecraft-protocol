@@ -46,6 +46,7 @@ module.exports = function (client, options) {
     if (player && player.hasChainIntegrity) {
       if (!player.lastSignature || player.lastSignature.equals(currentSignature) || index > player.sessionIndex) {
         player.lastSignature = currentSignature
+        player.sessionIndex = index
       } else {
         player.hasChainIntegrity = false
       }
@@ -158,7 +159,7 @@ module.exports = function (client, options) {
 
   client.on('system_chat', (packet) => {
     client.emit('systemChat', {
-      positionid: packet.isActionBar ? 2 : 1,
+      positionId: packet.isActionBar ? 2 : 1,
       formattedMessage: packet.content
     })
 
@@ -194,6 +195,7 @@ module.exports = function (client, options) {
       const tsDelta = BigInt(Date.now()) - packet.timestamp
       const expired = !packet.timestamp || tsDelta > messageExpireTime || tsDelta < 0
       const verified = !packet.unsignedChatContent && updateAndValidateSession(packet.senderUuid, packet.plainMessage, packet.signature, packet.index, packet.previousMessages, packet.salt, packet.timestamp) && !expired
+      if (verified) client._signatureCache.push(packet.signature)
       client.emit('playerChat', {
         plainMessage: packet.plainMessage,
         unsignedContent: packet.unsignedContent,
@@ -264,7 +266,7 @@ module.exports = function (client, options) {
           plain: packet.plainMessage,
           decorated: packet.formattedMessage
         },
-        messageHash: packet.bodyDigest,
+        messageHash: packet.messageHash,
         timestamp: packet.timestamp,
         salt: packet.salt,
         lastSeen: packet.previousMessages
@@ -295,6 +297,39 @@ module.exports = function (client, options) {
     })
   })
 
+  const sliceIndexForMessage = {}
+  client.on('declare_commands', (packet) => {
+    const nodes = packet.nodes
+    for (const commandNode of nodes[0].children) {
+      const node = nodes[commandNode]
+      const commandName = node.extraNodeData.name
+      function visit (node, depth = 0) {
+        const name = node.extraNodeData.name
+        if (node.extraNodeData.parser === 'minecraft:message') {
+          sliceIndexForMessage[commandName] = [name, depth]
+        }
+        for (const child of node.children) {
+          visit(nodes[child], depth + 1)
+        }
+      }
+      visit(node, 0)
+    }
+  })
+
+  function signaturesForCommand (string, ts, salt) {
+    const signatures = []
+    const slices = string.split(' ')
+    if (sliceIndexForMessage[slices[0]]) {
+      const [fieldName, sliceIndex] = sliceIndexForMessage[slices[0]]
+      const sliced = slices.slice(sliceIndex)
+      if (sliced.length > 0) {
+        const signable = sliced.join(' ')
+        signatures.push({ argumentName: fieldName, signature: client.signMessage(signable, ts, salt) })
+      }
+    }
+    return signatures
+  }
+
   // Chat Sending
   let pendingChatRequest
   let lastPreviewRequestId = 0
@@ -302,6 +337,23 @@ module.exports = function (client, options) {
   client._signedChat = (message, options = {}) => {
     options.timestamp = options.timestamp || BigInt(Date.now())
     options.salt = options.salt || 1n
+
+    if (message.startsWith('/') && !mcData.supportFeature('useChatSessions')) {
+      const command = message.slice(1)
+      client.write('chat_command', {
+        command,
+        timestamp: options.timestamp,
+        salt: options.salt,
+        argumentSignatures: signaturesForCommand(command, options.timestamp, options.salt),
+        signedPreview: options.didPreview,
+        previousMessages: client._lastSeenMessages.map((e) => ({
+          messageSender: e.sender,
+          messageSignature: e.signature
+        })),
+        lastRejectedMessage: client._lastRejectedMessage
+      })
+      return
+    }
 
     if (mcData.supportFeature('useChatSessions')) {
       let acc = 0
@@ -326,7 +378,7 @@ module.exports = function (client, options) {
         message,
         timestamp: options.timestamp,
         salt: options.salt,
-        signature: client.profileKeys ? client.signMessage(message, options.timestamp, options.salt, undefined, acknowledgements) : undefined,
+        signature: (client.profileKeys && client._session) ? client.signMessage(message, options.timestamp, options.salt, undefined, acknowledgements) : undefined,
         offset: client._lastSeenMessages.pending,
         acknowledged: bitset
       })
@@ -349,7 +401,7 @@ module.exports = function (client, options) {
         lastRejectedMessage: client._lastRejectedMessage
       })
       client._lastSeenMessages.pending = 0
-    } else {
+    } else if (client.serverFeatures.chatPreview) {
       client.write('chat_preview', {
         query: lastPreviewRequestId,
         message
@@ -490,7 +542,7 @@ class LastSeenMessages extends Array {
   pending = 0
 
   push (e) {
-    if (!e || !e.signature) return false // We do not acknowledge unsigned messages
+    if (!e || !e.signature || e.signature.length === 0) return false // We do not acknowledge unsigned messages
 
     // Insert a new entry at the top and shift everything to the right
     let last = this[0]

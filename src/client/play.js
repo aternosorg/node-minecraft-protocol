@@ -11,6 +11,23 @@ module.exports = function (client, options) {
     }
   })
 
+  client.once('login', () => {
+    const mcData = require('minecraft-data')(client.version)
+    if (mcData.supportFeature('useChatSessions') && client.profileKeys && client.cipher) {
+      client._session = {
+        index: 0,
+        uuid: uuid.v4fast()
+      }
+
+      client.write('chat_session_update', {
+        sessionUUID: client._session.uuid,
+        expireTime: client.profileKeys ? BigInt(client.profileKeys.expiresOn.getTime()) : undefined,
+        publicKey: client.profileKeys ? client.profileKeys.public.export({ type: 'spki', format: 'der' }) : undefined,
+        signature: client.profileKeys ? client.profileKeys.signatureV2 : undefined
+      })
+    }
+  })
+
   client.once('success', onLogin)
 
   function onLogin (packet) {
@@ -18,20 +35,6 @@ module.exports = function (client, options) {
     client.state = states.PLAY
     client.uuid = packet.uuid
     client.username = packet.username
-
-    if (mcData.supportFeature('useChatSessions') && client.profileKeys) {
-      client._session = {
-        index: 0,
-        uuid: uuid.v4fast()
-      }
-
-      client.write('session', {
-        sessionUUID: client._session.uuid,
-        expireTime: client.profileKeys ? BigInt(client.profileKeys.expiresOn.getTime()) : undefined,
-        publicKey: client.profileKeys ? client.profileKeys.public.export({ type: 'spki', format: 'der' }) : undefined,
-        signature: client.profileKeys ? client.profileKeys.signatureV2 : undefined
-      })
-    }
 
     if (mcData.supportFeature('signedChat')) {
       if (options.disableChatSigning && client.serverFeatures.enforcesSecureChat) {

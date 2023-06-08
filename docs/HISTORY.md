@@ -1,5 +1,32 @@
 # History
 
+## 1.42.0
+
+* 1.19.4 support (@extremeheat)
+* Fix plugin channels support (@turikhay)
+* Typo in "cypher" property check (@XHawk87)
+* Add ipc connection option for servers (@IceTank)
+* bug fix (@extremeheat)
+
+## 1.41.2
+* Fix client sending session packet while server is in login state (@frej4189)
+* Fix client attempting to sign messages on offline servers (@frej4189)
+
+## 1.41.1
+* Revert "Fix client sending chat_session packet before server state transition"
+
+## 1.41.0
+
+* Catch errors in custom payloads (@frej4189)
+* Fix client sending session packet when server is in offline mode (@frej4189)
+* Fix client sending chat_session packet before server state transition (@frej4189)
+
+## 1.40.3
+* Use consistent parameter naming for systemChat event
+
+## 1.40.2
+* Small chat.js fix (@frej4189)
+
 ## 1.40.1
 * Fix offline mode (@frej4189)
 
