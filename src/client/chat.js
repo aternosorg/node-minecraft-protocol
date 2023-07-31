@@ -68,29 +68,31 @@ module.exports = function (client, options) {
   function updateAndValidateChat (uuid, previousSignature, currentSignature, payload) {
     // Get the player information
     const player = client._players[uuid]
-    if (player && player.hasChainIntegrity) {
-      if (!player.lastSignature) {
-        // First time client is handling a chat message from this player, allow
-        player.lastSignature = currentSignature
-      } else if (player.lastSignature.equals(previousSignature)) {
-        player.lastSignature = currentSignature
-      } else {
-        // Not valid, client can no longer authenticate messages until player quits and reconnects
-        player.hasChainIntegrity = false
-      }
 
-      if (player.hasChainIntegrity) {
-        const verifier = crypto.createVerify('RSA-SHA256')
-        if (previousSignature) verifier.update(previousSignature)
-        verifier.update(concat('UUID', uuid))
-        verifier.update(payload)
-        player.hasChainIntegrity = verifier.verify(player.publicKey, currentSignature)
-      }
-
-      return player.hasChainIntegrity
+    // Refactor this condition statement
+    if (!player && !player.hasChainIntegrity)
+      return false
+    
+    if (!player.lastSignature || player.lastSignature.equals(previousSignature)) {
+      // First time client is handling a chat message from this player, allow
+      player.lastSignature = currentSignature
+    } else {
+      // Not valid, client can no longer authenticate messages until player quits and reconnects
+      player.hasChainIntegrity = false
     }
 
-    return false
+    if (player.hasChainIntegrity) {
+      const verifier = crypto.createVerify('RSA-SHA256')
+      
+      if (previousSignature) 
+        verifier.update(previousSignature)
+        
+      verifier.update(concat('UUID', uuid))
+      verifier.update(payload)
+      player.hasChainIntegrity = verifier.verify(player.publicKey, currentSignature)
+    }
+
+    return player.hasChainIntegrity
   }
 
   client.on('player_remove', (packet) => {
