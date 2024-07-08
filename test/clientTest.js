@@ -2,6 +2,7 @@
 
 const mc = require('../')
 const os = require('os')
+const fs = require('fs')
 const path = require('path')
 const assert = require('power-assert')
 const util = require('util')
@@ -20,7 +21,8 @@ for (const supportedVersion of mc.supportedVersions) {
   const version = mcData.version
   const MC_SERVER_JAR_DIR = process.env.MC_SERVER_JAR_DIR || os.tmpdir()
   const MC_SERVER_JAR = MC_SERVER_JAR_DIR + '/minecraft_server.' + version.minecraftVersion + '.jar'
-  const wrap = new Wrap(MC_SERVER_JAR, MC_SERVER_PATH + '_' + supportedVersion, {
+  const MC_SERVER_DIR = MC_SERVER_PATH + '_' + supportedVersion
+  const wrap = new Wrap(MC_SERVER_JAR, MC_SERVER_DIR, {
     minMem: 1024,
     maxMem: 1024
   })
@@ -28,7 +30,7 @@ for (const supportedVersion of mc.supportedVersions) {
     console.log(line)
   })
 
-  describe('client ' + version.minecraftVersion, function () {
+  describe('client ' + supportedVersion + 'v', function () {
     this.timeout(10 * 60 * 1000)
 
     before(async function () {
@@ -57,6 +59,7 @@ for (const supportedVersion of mc.supportedVersions) {
             'server-port': PORT,
             motd: 'test1234',
             'max-players': 120,
+            // 'level-type': 'flat',
             'use-native-transport': 'false' // java 16 throws errors without this, https://www.spigotmc.org/threads/unable-to-access-address-of-buffer.311602
           }, (err) => {
             if (err) reject(err)
@@ -118,7 +121,23 @@ for (const supportedVersion of mc.supportedVersions) {
           assert.strictEqual(packet.gameMode, 0)
           client.chat('hello everyone; I have logged in.')
         })
-
+        // Dump some data for easier debugging
+        client.on('raw.registry_data', (buffer) => {
+          fs.writeFileSync(MC_SERVER_DIR + '_registry_data.bin', buffer)
+        })
+        client.on('registry_data', (json) => {
+          fs.writeFileSync(MC_SERVER_DIR + '_registry_data.json', JSON.stringify(json))
+        })
+        client.on('login', (packet) => {
+          fs.writeFileSync(MC_SERVER_DIR + '_login.json', JSON.stringify(packet))
+          if (fs.existsSync(MC_SERVER_DIR + '_registry_data.json')) {
+            // generate a loginPacket.json for minecraft-data
+            fs.writeFileSync(MC_SERVER_DIR + '_loginPacket.json', JSON.stringify({
+              ...packet,
+              dimensionCodec: JSON.parse(fs.readFileSync(MC_SERVER_DIR + '_registry_data.json')).codec
+            }, null, 2))
+          }
+        })
         client.on('playerChat', function (data) {
           chatCount += 1
           assert.ok(chatCount <= 2)
@@ -147,21 +166,22 @@ for (const supportedVersion of mc.supportedVersions) {
             }
           } else {
             // 1.19+
-
-            const message = JSON.parse(data.formattedMessage || JSON.stringify({ text: data.plainMessage }))
+            console.log('Chat Message', data)
+            const sender = JSON.parse(data.senderName)
+            const msgPayload = data.formattedMessage ? JSON.parse(data.formattedMessage) : data.plainMessage
+            const plainMessage = client.parseMessage(msgPayload).toString()
 
             if (chatCount === 1) {
-              assert.strictEqual(message.text, 'hello everyone; I have logged in.')
-              const sender = JSON.parse(data.senderName)
+              assert.strictEqual(plainMessage, 'hello everyone; I have logged in.')
               assert.deepEqual(sender.clickEvent, {
                 action: 'suggest_command',
                 value: '/tell Player '
               })
               assert.strictEqual(sender.text, 'Player')
             } else if (chatCount === 2) {
-              assert.strictEqual(message.text, 'hello')
-              const sender = JSON.parse(data.senderName)
-              assert.strictEqual(sender.text, 'Server')
+              const plainSender = client.parseMessage(sender).toString()
+              assert.strictEqual(plainMessage, 'hello')
+              assert.strictEqual(plainSender, 'Server')
               wrap.removeListener('line', lineListener)
               client.end()
               done()
