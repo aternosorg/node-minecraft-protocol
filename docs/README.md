@@ -13,7 +13,7 @@ Parse and serialize minecraft packets, plus authentication and encryption.
 
  * Supports Minecraft PC version 1.7.10, 1.8.8, 1.9 (15w40b, 1.9, 1.9.1-pre2, 1.9.2, 1.9.4),
   1.10 (16w20a, 1.10-pre1, 1.10, 1.10.1, 1.10.2), 1.11 (16w35a, 1.11, 1.11.2), 1.12 (17w15a, 17w18b, 1.12-pre4, 1.12, 1.12.1, 1.12.2), and 1.13 (17w50a, 1.13, 1.13.1, 1.13.2-pre1, 1.13.2-pre2, 1.13.2), 1.14 (1.14, 1.14.1, 1.14.3, 1.14.4)
-  , 1.15 (1.15, 1.15.1, 1.15.2) and 1.16 (20w13b, 20w14a, 1.16-rc1, 1.16, 1.16.1, 1.16.2, 1.16.3, 1.16.4), 1.17 (21w07a, 1.17, 1.17.1), 1.18 (1.18, 1.18.1 and 1.18.2), 1.19 (1.19, 1.19.1, 1.19.2, 1.19.3, 1.19.4), 1.20 (1.20, 1.20.1)
+  , 1.15 (1.15, 1.15.1, 1.15.2) and 1.16 (20w13b, 20w14a, 1.16-rc1, 1.16, 1.16.1, 1.16.2, 1.16.3, 1.16.4, 1.16.5), 1.17 (21w07a, 1.17, 1.17.1), 1.18 (1.18, 1.18.1 and 1.18.2), 1.19 (1.19, 1.19.1, 1.19.2, 1.19.3, 1.19.4), 1.20 (1.20, 1.20.1, 1.20.2, 1.20.3 and 1.20.4)
  * Parses all packets and emits events with packet fields as JavaScript
    objects.
  * Send a packet by supplying fields as a JavaScript object.
@@ -22,7 +22,8 @@ Parse and serialize minecraft packets, plus authentication and encryption.
    - Encryption
    - Compression
    - Both online and offline mode
-   - Respond to keep-alive packets.
+   - Respond to keep-alive packets
+   - Follow DNS service records (SRV)
    - Ping a server for status
  * Server
    - Online/Offline mode
@@ -75,29 +76,30 @@ node-minecraft-protocol is pluggable.
 const mc = require('minecraft-protocol');
 const client = mc.createClient({
   host: "localhost",   // optional
-  port: 25565,         // optional
-  username: "email@example.com",
-  password: "12345678",
-  auth: 'microsoft' // optional; by default uses offline mode, if using a microsoft account, set to 'microsoft'
+  port: 25565,                 // set if you need a port that isn't 25565
+  username: 'Bot',             // username to join as if auth is `offline`, else a unique identifier for this account. Switch if you want to change accounts
+  // version: false,           // only set if you need a specific version or snapshot (ie: "1.8.9" or "1.16.5"), otherwise it's set automatically
+  // password: '12345678'      // set if you want to use password-based auth (may be unreliable). If specified, the `username` must be an email
 });
 
-client.on('chat', function(packet) {
+client.on('playerChat', function (ev) {
   // Listen for chat messages and echo them back.
-  const jsonMsg = JSON.parse(packet.message);
-  
-  if (jsonMsg.translate == 'chat.type.announcement' || jsonMsg.translate == 'chat.type.text') {
-    const username = jsonMsg.with[0].text;
-    const msg = jsonMsg.with[1];
-
-    if (username === client.username) return;
-
-    client.write('chat', {message: msg.text});
-  }
+  const content = ev.formattedMessage
+    ? JSON.parse(ev.formattedMessage)
+    : ev.unsignedChat
+      ? JSON.parse(ev.unsignedContent)
+      : ev.plainMessage
+  const jsonMsg = JSON.parse(packet.message)
+  if (ev.senderName === client.username) return
+  client.chat(JSON.stringify(content))
 });
 ```
 
-If the server is in offline mode, you may leave out the `password` option and switch auth to `offline`.
-You can also leave out `password` when using a Microsoft account. If provided, password based auth will be attempted first which may fail. *Note:* if using a Microsoft account, your account age must be >= 18 years old.
+Set `auth` to `offline` if the server is in offline mode. If `auth` is set to `microsoft`, you will be prompted to login to microsoft.com with a code in your browser. After signing in on your browser, the client will automatically obtain and cache authentication tokens (under your specified username) so you don't have to sign-in again.
+
+To switch the account, update the supplied username. By default, cached tokens will be stored in your user's .minecraft folder, or if profilesFolder is specified, they'll instead be stored there. For more information on bot options see the [API doc](./API.md).
+
+Note: SRV records will only be looked up if the port is unspecified or set to 25565 and if the `host` is a valid non-local domain name.
 
 ### Client example joining a Realm
 
@@ -115,29 +117,32 @@ const client = mc.createClient({
 
 ### Hello World server example
 
+For a more up to date example, see examples/server/server.js.
+
 ```js
-const mc = require('minecraft-protocol');
+const mc = require('minecraft-protocol')
+const nbt = require('prismarine-nbt')
 const server = mc.createServer({
   'online-mode': true,   // optional
   encryption: true,      // optional
   host: '0.0.0.0',       // optional
   port: 25565,           // optional
-  version: '1.16.3'
-});
+  version: '1.18'
+})
 const mcData = require('minecraft-data')(server.version)
 
-server.on('login', function(client) {
+function chatText (text) {
+  return mcData.supportFeature('chatPacketsUseNbtComponents')
+    ? nbt.comp({ text: nbt.string(text) })
+    : JSON.stringify({ text })
+}
+
+server.on('playerJoin', function(client) {
   const loginPacket = mcData.loginPacket
 
   client.write('login', {
+    ...loginPacket,
     entityId: client.id,
-    isHardcore: false,
-    gameMode: 0,
-    previousGameMode: 255,
-    worldNames: loginPacket.worldNames,
-    dimensionCodec: loginPacket.dimensionCodec,
-    dimension: loginPacket.dimension,
-    worldName: 'minecraft:overworld',
     hashedSeed: [0, 0],
     maxPlayers: server.maxPlayers,
     viewDistance: 10,
@@ -145,7 +150,7 @@ server.on('login', function(client) {
     enableRespawnScreen: true,
     isDebug: false,
     isFlat: false
-  });
+  })
 
   client.write('position', {
     x: 0,
@@ -154,18 +159,35 @@ server.on('login', function(client) {
     yaw: 0,
     pitch: 0,
     flags: 0x00
-  });
+  })
 
-  const msg = {
+  const message = {
     translate: 'chat.type.announcement',
-    "with": [
+    with: [
       'Server',
       'Hello, world!'
     ]
-  };
-  
-  client.write("chat", { message: JSON.stringify(msg), position: 0, sender: '0' });
-});
+  }
+  if (mcData.supportFeature('signedChat')) {
+    client.write('player_chat', {
+      plainMessage: message,
+      signedChatContent: '',
+      unsignedChatContent: chatText(message),
+      type: 0,
+      senderUuid: 'd3527a0b-bc03-45d5-a878-2aafdd8c8a43', // random
+      senderName: JSON.stringify({ text: 'me' }),
+      senderTeam: undefined,
+      timestamp: Date.now(),
+      salt: 0n,
+      signature: mcData.supportFeature('useChatSessions') ? undefined : Buffer.alloc(0),
+      previousMessages: [],
+      filterType: 0,
+      networkName: JSON.stringify({ text: 'me' })
+    })
+  } else {
+    client.write('chat', { message: JSON.stringify({ text: message }), position: 0, sender: 'me' })
+  }
+})
 ```
 
 ## Testing

@@ -8,8 +8,15 @@ const options = {
 const server = mc.createServer(options)
 const mcData = require('minecraft-data')(server.version)
 const loginPacket = mcData.loginPacket
+const nbt = require('prismarine-nbt')
 
-server.on('login', function (client) {
+function chatText (text) {
+  return mcData.supportFeature('chatPacketsUseNbtComponents')
+    ? nbt.comp({ text: nbt.string(text) })
+    : JSON.stringify({ text })
+}
+
+server.on('playerJoin', function (client) {
   const addr = client.socket.remoteAddress
   console.log('Incoming connection', '(' + addr + ')')
 
@@ -49,14 +56,32 @@ server.on('login', function (client) {
     flags: 0x00
   })
 
-  const msg = {
+  const message = {
     translate: 'chat.type.announcement',
     with: [
       'Server',
       'Hello, world!'
     ]
   }
-  client.write('chat', { message: JSON.stringify(msg), position: 0, sender: '0' })
+  if (mcData.supportFeature('signedChat')) {
+    client.write('player_chat', {
+      plainMessage: message,
+      signedChatContent: '',
+      unsignedChatContent: chatText(message),
+      type: 0,
+      senderUuid: 'd3527a0b-bc03-45d5-a878-2aafdd8c8a43', // random
+      senderName: JSON.stringify({ text: 'me' }),
+      senderTeam: undefined,
+      timestamp: Date.now(),
+      salt: 0n,
+      signature: mcData.supportFeature('useChatSessions') ? undefined : Buffer.alloc(0),
+      previousMessages: [],
+      filterType: 0,
+      networkName: JSON.stringify({ text: 'me' })
+    })
+  } else {
+    client.write('chat', { message: JSON.stringify({ text: message }), position: 0, sender: 'me' })
+  }
 })
 
 server.on('error', function (error) {

@@ -94,9 +94,9 @@ for (const supportedVersion of mc.supportedVersions) {
     }
   }
 
-  describe('mc-server ' + version.minecraftVersion, function () {
+  describe('mc-server ' + supportedVersion + 'v', function () {
     this.timeout(5000)
-    this.beforeAll(async function () {
+    this.beforeEach(async function () {
       PORT = await getPort()
       console.log(`Using port for tests: ${PORT}`)
     })
@@ -126,23 +126,30 @@ for (const supportedVersion of mc.supportedVersions) {
         version: version.minecraftVersion,
         port: PORT
       })
-      let count = 2
+      let serverClosed, clientClosed
       server.on('connection', function (client) {
         client.on('end', function (reason) {
           assert.strictEqual(reason, 'LoginTimeout')
           server.close()
         })
       })
-      server.on('close', resolve)
+      server.on('close', () => {
+        serverClosed = true
+        console.log('Server closed')
+        checkFinish()
+      })
       server.on('listening', function () {
         const client = new mc.Client(false, version.minecraftVersion)
-        client.on('end', resolve)
+        client.on('end', () => {
+          clientClosed = true
+          console.log('Client closed')
+          checkFinish()
+        })
         client.connect(PORT, '127.0.0.1')
       })
 
-      function resolve () {
-        count -= 1
-        if (count <= 0) done()
+      function checkFinish () {
+        if (serverClosed && clientClosed) done()
       }
     })
 
@@ -154,14 +161,19 @@ for (const supportedVersion of mc.supportedVersions) {
         version: version.minecraftVersion,
         port: PORT
       })
-      let count = 2
+      let serverClosed, clientClosed
       server.on('connection', function (client) {
         client.on('end', function (reason) {
           assert.strictEqual(reason, 'KeepAliveTimeout')
+          console.log('Server client disconnected')
           server.close()
         })
       })
-      server.on('close', resolve)
+      server.on('close', () => {
+        serverClosed = true
+        console.log('Server closed')
+        checkFinish()
+      })
       server.on('listening', function () {
         const client = mc.createClient({
           username: 'superpants',
@@ -170,11 +182,14 @@ for (const supportedVersion of mc.supportedVersions) {
           keepAlive: false,
           version: version.minecraftVersion
         })
-        client.on('end', resolve)
+        client.on('end', () => {
+          clientClosed = true
+          console.log('Client closed')
+          checkFinish()
+        })
       })
-      function resolve () {
-        count -= 1
-        if (count <= 0) done()
+      function checkFinish () {
+        if (serverClosed && clientClosed) done()
       }
     })
 
@@ -299,7 +314,8 @@ for (const supportedVersion of mc.supportedVersions) {
 
       const username = ['player1', 'player2']
       let index = 0
-      server.on('login', function (client) {
+      server.on('playerJoin', function (client) {
+        console.log('ChatTest: Player has joined')
         assert.notEqual(client.id, null)
         assert.strictEqual(client.username, username[index++])
         broadcast(client.username + ' joined the game.')
@@ -322,8 +338,10 @@ for (const supportedVersion of mc.supportedVersions) {
           version: version.minecraftVersion,
           port: PORT
         }))
+        console.log('ChatTest: Player1 is joining...')
 
         player1.on('login', async function (packet) {
+          console.log('ChatTest: Player 1 has joined')
           assert.strictEqual(packet.gameMode, 1)
           const player2 = applyClientHelpers(mc.createClient({
             username: 'player2',
@@ -332,14 +350,16 @@ for (const supportedVersion of mc.supportedVersions) {
             port: PORT
           }))
 
+          console.log('ChatTest: waiting for next message from P2')
           const p1Join = await player1.nextMessage('player2')
 
           assert.strictEqual(p1Join, '{"text":"player2 joined the game."}')
-
+          console.log('ChatTest: Got message from P2')
           player2.chat('hi')
           const p2hi = await player1.nextMessage('player2')
           assert.strictEqual(p2hi, '{"text":"<player2> hi"}')
 
+          console.log('ChatTest: Waiting again for next message from P2')
           player1.chat('hello')
           const p1hello = await player2.nextMessage('player1')
           assert.strictEqual(p1hello, '{"text":"<player1> hello"}')
@@ -358,27 +378,36 @@ for (const supportedVersion of mc.supportedVersions) {
         version: version.minecraftVersion,
         port: PORT
       })
-      let count = 4
+      let serverPlayerDisconnected, serverClosed, clientClosed
       server.on('connection', function (client) {
         client.on('end', function (reason) {
-          resolve()
+          serverPlayerDisconnected = true
+          console.log('Server player disconnected')
+          checkFinish()
           server.close()
         })
       })
-      server.on('close', resolve)
+      server.on('close', () => {
+        serverClosed = true
+        console.log('Server closed')
+        checkFinish()
+      })
       server.on('listening', function () {
-        resolve()
+        console.log('Server is listening')
         const client = mc.createClient({
           username: 'lalalal',
           host: '127.0.0.1',
           version: version.minecraftVersion,
           port: PORT
         })
-        client.on('end', resolve)
+        client.on('end', () => {
+          clientClosed = true
+          console.log('Client closed')
+          checkFinish()
+        })
       })
-      function resolve () {
-        count -= 1
-        if (count <= 0) done()
+      function checkFinish () {
+        if (serverPlayerDisconnected && clientClosed && serverClosed) done()
       }
     })
 
@@ -388,15 +417,22 @@ for (const supportedVersion of mc.supportedVersions) {
         version: version.minecraftVersion,
         port: PORT
       })
-      let count = 2
-      server.on('login', function (client) {
+      let serverPlayerDisconnected, serverClosed
+      server.on('playerJoin', function (client) {
+        console.log('Server got player join')
         client.on('end', function (reason) {
           assert.strictEqual(reason, 'ServerShutdown')
-          resolve()
+          serverPlayerDisconnected = true
+          console.log('Server player disconnected')
+          checkFinish()
         })
         client.write('login', loginPacket(client, server))
       })
-      server.on('close', resolve)
+      server.on('close', () => {
+        serverClosed = true
+        console.log('Server closed')
+        checkFinish()
+      })
       server.on('listening', function () {
         const client = mc.createClient({
           username: 'lalalal',
@@ -404,13 +440,13 @@ for (const supportedVersion of mc.supportedVersions) {
           version: version.minecraftVersion,
           port: PORT
         })
-        client.on('login', function () {
+        client.on('playerJoin', function () {
+          console.log('Client joined')
           server.close()
         })
       })
-      function resolve () {
-        count -= 1
-        if (count <= 0) done()
+      function checkFinish () {
+        if (serverPlayerDisconnected && serverClosed) done()
       }
     })
 
@@ -420,7 +456,7 @@ for (const supportedVersion of mc.supportedVersions) {
         version: version.minecraftVersion,
         port: PORT
       })
-      server.on('login', function (client) {
+      server.on('playerJoin', function (client) {
         client.write('login', loginPacket(client, server))
       })
       server.on('close', done)
@@ -459,7 +495,7 @@ for (const supportedVersion of mc.supportedVersions) {
         version: version.minecraftVersion,
         port: PORT
       })
-      server.on('login', function (client) {
+      server.on('playerJoin', function (client) {
         client.on('end', function (reason) {
           assert.strictEqual(reason, 'ServerShutdown')
         })
