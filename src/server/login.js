@@ -7,6 +7,7 @@ const chatPlugin = require('./chat')
 const { concat } = require('../transforms/binaryStream')
 const { mojangPublicKeyPem } = require('./constants')
 const debug = require('debug')('minecraft-protocol')
+const NodeRSA = require('node-rsa')
 const nbt = require('prismarine-nbt')
 
 /**
@@ -104,7 +105,8 @@ module.exports = function (client, server, options) {
       client.write('encryption_begin', {
         serverId,
         publicKey: client.publicKey,
-        verifyToken: client.verifyToken
+        verifyToken: client.verifyToken,
+        shouldAuthenticate: true
       })
     } else {
       loginClient()
@@ -119,6 +121,9 @@ module.exports = function (client, server, options) {
       }
     }
 
+    const keyRsa = new NodeRSA(server.serverKey.exportKey('pkcs1'), 'private', { encryptionScheme: 'pkcs1' })
+    keyRsa.setOptions({ environment: 'browser' })
+
     if (packet.hasVerifyToken === false) {
       // 1.19, hasVerifyToken is set and equal to false IF chat signing is enabled
       // This is the default action starting in 1.19.1.
@@ -130,10 +135,7 @@ module.exports = function (client, server, options) {
     } else {
       const encryptedToken = packet.hasVerifyToken ? packet.crypto.verifyToken : packet.verifyToken
       try {
-        const decryptedToken = crypto.privateDecrypt({
-          key: server.serverKey.exportKey(),
-          padding: crypto.constants.RSA_PKCS1_PADDING
-        }, encryptedToken)
+        const decryptedToken = keyRsa.decrypt(encryptedToken)
 
         if (!client.verifyToken.equals(decryptedToken)) {
           client.end('DidNotEncryptVerifyTokenProperly')
@@ -144,13 +146,9 @@ module.exports = function (client, server, options) {
         return
       }
     }
-
     let sharedSecret
     try {
-      sharedSecret = crypto.privateDecrypt({
-        key: server.serverKey.exportKey(),
-        padding: crypto.constants.RSA_PKCS1_PADDING
-      }, packet.sharedSecret)
+      sharedSecret = keyRsa.decrypt(packet.sharedSecret)
     } catch (e) {
       client.end('DidNotEncryptVerifyTokenProperly')
       return

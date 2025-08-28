@@ -238,6 +238,7 @@ declare module 'minecraft-protocol' {
 		HANDSHAKING = 'handshaking',
 		LOGIN = 'login',
 		PLAY = 'play',
+		CONFIGURATION = 'configuration',
 		STATUS = 'status',
 	}
 

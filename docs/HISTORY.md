@@ -1,5 +1,39 @@
 # History
 
+## 1.61.0
+* [1.21.6 (#1416)](https://github.com/PrismarineJS/node-minecraft-protocol/commit/0bfd970e954f1ab5e579ebe51cbefbf07d952939) (thanks @extremeheat)
+
+## 1.60.1
+* [Fix undefined chat message signatures causing crash (#1413)](https://github.com/PrismarineJS/node-minecraft-protocol/commit/2119b04f52605f62df2d029908d92d6443aa68db) (thanks @PiotrW01)
+* [types: add missing config state (#1397)](https://github.com/PrismarineJS/node-minecraft-protocol/commit/5242498797e1e9877f9b0056ff608fb68e0a3508) (thanks @notsapinho)
+* [fix leak on entering config state twice (#1381)](https://github.com/PrismarineJS/node-minecraft-protocol/commit/74aea5a5d6a495bfdfc7e97b164524f6a0c6a203) (thanks @zardoy)
+
+## 1.60.0
+* [1.21.5 (#1408)](https://github.com/PrismarineJS/node-minecraft-protocol/commit/2467716b6f52d2c83a6c2173bcfa686d4a437868) (thanks @extremeheat)
+
+## 1.59.0
+* [fix: Wrap base64-encoded PEM with 64-char line boundary (#1292)](https://github.com/PrismarineJS/node-minecraft-protocol/commit/0f6da566975a262e4e6f12a11e9b311496682508) (thanks @littledivy)
+
+## 1.58.0
+* [Fixes to protocol Holder implementation (#1355)](https://github.com/PrismarineJS/node-minecraft-protocol/commit/7207b61f3a809ec9db01869a90c5ccaeafee4ca1) (thanks @extremeheat)
+* [Bump @types/node from 22.15.33 to 24.0.4 (#1405)](https://github.com/PrismarineJS/node-minecraft-protocol/commit/1e38d8fc1e1bbe7aa834055cfd38ed0fa22c2085) (thanks @dependabot[bot])
+
+## 1.57.0
+* [Update package.json to remove lodash.get](https://github.com/PrismarineJS/node-minecraft-protocol/commit/031f13fea45264775311ae82e5a4efe74ebba96d) (thanks @rom1504)
+
+## 1.56.0
+* [Update serializer.js to remove usage of lodash.get (#1390)](https://github.com/PrismarineJS/node-minecraft-protocol/commit/6a445312d384a7ca739e29d61bc37e4525da21e4) (thanks @rom1504)
+
+## 1.55.0
+* [Fix `client.end()` (#1376)](https://github.com/PrismarineJS/node-minecraft-protocol/commit/3bd4dc1b2002cd7badfa5b9cf8dda35cd6cc9ac1) (thanks @h5mcbox)
+* [Fix #1369 online-mode error 1.20.5-1.21.4 (#1375)](https://github.com/PrismarineJS/node-minecraft-protocol/commit/5ec3dd4b367fcc039fbcb3edd214fe3cf8178a6d) (thanks @h5mcbox)
+* [Update to node 22 (#1371)](https://github.com/PrismarineJS/node-minecraft-protocol/commit/e9eb551ba30ec2e742c49e6927be6402b413bb76) (thanks @rom1504)
+* [Add npm update to version error message](https://github.com/PrismarineJS/node-minecraft-protocol/commit/080aa52c5bd70a5f9c4ecc37480497dd335a9e83) (thanks @extremeheat)
+* [Add `npm update` to version error message](https://github.com/PrismarineJS/node-minecraft-protocol/commit/c9cf36354914a57bac9e17e2076670b37c04d4a9) (thanks @extremeheat)
+
+## 1.54.0
+* [fix: use node-rsa for decryption for higher node compatibility (#1319)](https://github.com/PrismarineJS/node-minecraft-protocol/commit/c879d0e753f4f16fe5889ba53c9c004cc8832a56) (thanks @jacobk999)
+
 ## 1.53.0
 * [1.21.4 (#1366)](https://github.com/PrismarineJS/node-minecraft-protocol/commit/e74d11f66a835c08337b47dc5a2a7848c7e6e94c) (thanks @extremeheat)
 * [Bump mocha from 10.8.2 to 11.0.1 (#1352)](https://github.com/PrismarineJS/node-minecraft-protocol/commit/502513b432695bd9e0fdff039bd8a7de02b307e0) (thanks @dependabot[bot])
